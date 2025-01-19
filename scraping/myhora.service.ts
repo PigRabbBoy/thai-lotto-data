@@ -95,6 +95,7 @@ export class MyHoraScrapingService implements ThaiLottoScrapingService {
       const text = listYearsElement.eq(i).text();
       const year = parseInt(text.replaceAll("ตรวจหวย ", ""), 10);
       if (!Number.isNaN(year)) {
+        console.log(year);
         const yearDates = await this.getDatesByYear(year - 543);
         dates.push(...yearDates);
       }
@@ -242,6 +243,7 @@ export class MyHoraScrapingService implements ThaiLottoScrapingService {
     const results: ThaiLottoDataWithDate[] = [];
     const dates = await this.getDates();
     for (const date of dates) {
+      console.log(date);
       const data = await this.getLottoDataByDate(date);
       if (data) {
         results.push({ date, ...data });
