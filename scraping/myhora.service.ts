@@ -5,7 +5,9 @@ import type {
   ThaiLottoScrapingService,
 } from "./scraping.service";
 import { ThaiTime } from "../utils/thai-time";
+import pLimit from "p-limit";
 
+const limit = pLimit(10);
 function normalizeSpaces(str: string) {
   return str.replace(/\s+/g, " ").trim();
 }
@@ -90,17 +92,20 @@ export class MyHoraScrapingService implements ThaiLottoScrapingService {
       "#container > div.content-main-fullwidth > div:nth-child(9) > div.lotto-left > div.mb-15"
     ).children();
 
-    const dates: Date[] = [];
-    for (let i = 0; i < listYearsElement.length; i++) {
-      const text = listYearsElement.eq(i).text();
-      const year = parseInt(text.replaceAll("ตรวจหวย ", ""), 10);
-      if (!Number.isNaN(year)) {
-        console.log(year);
-        const yearDates = await this.getDatesByYear(year - 543);
-        dates.push(...yearDates);
-      }
-    }
-    return dates;
+    const dates = await Promise.all(
+      Array.from({ length: listYearsElement.length }, (_, i) => i).map((i) =>
+        limit(async () => {
+          const text = listYearsElement.eq(i).text();
+          const year = parseInt(text.replaceAll("ตรวจหวย ", ""), 10);
+          if (Number.isNaN(year)) return null;
+          console.log(year);
+          const yearDates = await this.getDatesByYear(year - 543);
+          return yearDates;
+        })
+      )
+    );
+
+    return dates.filter((x) => x !== null).flat();
   }
   async getDatesByYear(year: number): Promise<Date[]> {
     const thaiYear = year + 543;
@@ -210,14 +215,19 @@ export class MyHoraScrapingService implements ThaiLottoScrapingService {
   }
   async getByYear(year: number): Promise<ThaiLottoDataWithDate[]> {
     const dates = await this.getDatesByYear(year);
-    const results: ThaiLottoDataWithDate[] = [];
-    for (const date of dates) {
-      const data = await this.getLottoDataByDate(date);
-      if (data) {
-        results.push({ date, ...data });
-      }
-    }
-    return results;
+    const results = await Promise.all(
+      dates.map(async (date) =>
+        limit(async () => {
+          const data = await this.getLottoDataByDate(date);
+          if (data) {
+            return { date, ...data };
+          }
+          return null;
+        })
+      )
+    );
+
+    return results.filter((x) => x !== null);
   }
   async getByMonth(
     // start with 1
@@ -240,16 +250,21 @@ export class MyHoraScrapingService implements ThaiLottoScrapingService {
   }
 
   async getAll(): Promise<ThaiLottoDataWithDate[]> {
-    const results: ThaiLottoDataWithDate[] = [];
     const dates = await this.getDates();
-    for (const date of dates) {
-      console.log(date);
-      const data = await this.getLottoDataByDate(date);
-      if (data) {
-        results.push({ date, ...data });
-      }
-    }
 
-    return results;
+    const results = await Promise.all(
+      dates.map(async (date) =>
+        limit(async () => {
+          console.log(date);
+          const data = await this.getLottoDataByDate(date);
+          if (data) {
+            return { date, ...data };
+          }
+          return null;
+        })
+      )
+    );
+
+    return results.filter((x) => x !== null);
   }
 }
