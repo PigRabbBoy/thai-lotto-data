@@ -7,7 +7,7 @@ import type {
 import { ThaiTime } from "../utils/thai-time";
 import pLimit from "p-limit";
 
-const limit = pLimit(10);
+const limit = pLimit(20);
 function normalizeSpaces(str: string) {
   return str.replace(/\s+/g, " ").trim();
 }

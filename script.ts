@@ -79,8 +79,9 @@ for (const { date, ...data } of list) {
 }
 
 for (const key in dataCSV2) {
+  const jsonData = [...dataCSV2[key]];
   await writeCSV(dataCSV2[key], `./data/result/${key}.csv`);
-  await Bun.write(`./data/result/${key}.json`, JSON.stringify(dataCSV2[key]), {
+  await Bun.write(`./data/result/${key}.json`, JSON.stringify(jsonData), {
     createPath: true,
   });
 }
